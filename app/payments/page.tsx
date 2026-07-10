@@ -615,7 +615,7 @@ export default function PaymentsPage() {
     }
   }
 
-  const exportToExcel = async () => {
+  const handleExportarExcel = async () => {
     try {
       setExportando(true)
       
@@ -997,7 +997,7 @@ export default function PaymentsPage() {
                 </Button>
               )}
               <Button
-                onClick={exportToExcel}
+                onClick={handleExportarExcel}
                 disabled={pagos.length === 0 || exportando}
                 variant="outline"
                 className="text-xs bg-transparent"
