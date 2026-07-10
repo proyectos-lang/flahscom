@@ -1,6 +1,36 @@
 # Database schema
 
-Generated directly from the live Supabase project via the PostgREST OpenAPI spec (`https://oygvmlplpwrjhjsjuxot.supabase.co/rest/v1/`).
+Generated directly from the live Supabase project via the PostgREST OpenAPI spec (`https://oygvmlplpwrjhjsjuxot.supabase.co/rest/v1/`), cross-checked against `information_schema`/`pg_policies` output from `scripts/99-schema-introspection.sql`.
+
+## ⚠️ Row Level Security — critical finding
+
+Out of 30 tables, **only 2 have RLS policies defined**:
+
+| Table | Policy | Command | Roles |
+|---|---|---|---|
+| `evaluaciones` | Permitir inserciones públicas en evaluaciones | INSERT | public |
+| `empleados` | Permitir lectura pública de nombres de empleados | SELECT | public |
+
+All other tables have no policy at all. A live check using **only the public `anon` key** (the one shipped in every browser bundle via `NEXT_PUBLIC_SUPABASE_ANON_KEY`) confirms these are readable with zero authentication:
+
+| Table | Rows exposed via anon key |
+|---|---|
+| `perfiles` | 18 |
+| `permisos` | 18 |
+| `clientes` | 5,274 |
+| `contratos` | 5,289 |
+| `empleados` | 117 |
+| `plan_pagos` | 63,544 |
+
+This means anyone who opens the deployed site can call `GET {SUPABASE_URL}/rest/v1/clientes?select=*` (or any other table) directly against Supabase — completely bypassing the Next.js app, its login screen, and the `permisos` checks — and read the full customer list, contracts, payment history, and user profiles/roles. If RLS is disabled (not just unpoliced) rather than enabled, standard Supabase default grants may also allow **INSERT/UPDATE/DELETE** from the anon role, which was not tested here to avoid touching production data, but should be assumed possible until confirmed otherwise.
+
+**Recommended fix** (matches how the app is already built — nearly every read/write goes through `/api/*` routes using `SUPABASE_SERVICE_ROLE_KEY`, which bypasses RLS regardless):
+1. Enable RLS on every `public` table: `ALTER TABLE public.<table> ENABLE ROW LEVEL SECURITY;`
+2. Add no policies for `anon`/`authenticated` on most tables — the API routes use the service key and are unaffected by RLS.
+3. Add narrow policies only where the browser talks to Supabase directly today (`lib/auth-context.tsx` reads `perfiles` and `permisos` with the anon/browser client), e.g. `USING (auth_user_id = auth.uid())` so a logged-in user can only read their own profile/permissions row.
+4. Re-run the anon-key checks above after the change — they should return `401`/empty instead of row counts.
+
+This is a production data-exposure issue independent of the GitHub/Vercel migration — it already applies today, wherever the app is hosted. It has not been fixed yet; ask before making DB-level changes since RLS misconfiguration can also break legitimate app functionality if policies are missing.
 
 ## Tables (30)
 
