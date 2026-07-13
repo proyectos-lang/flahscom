@@ -100,6 +100,14 @@ function formatFecha(val: string | null | undefined): string {
   return d.toLocaleDateString("es-HN", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+function formatMes(val: string | null | undefined): string {
+  if (!val) return "-"
+  const d = new Date(String(val).slice(0, 10) + "T00:00:00")
+  if (Number.isNaN(d.getTime())) return "-"
+  const mes = d.toLocaleDateString("es-HN", { month: "long", year: "numeric" })
+  return mes.charAt(0).toUpperCase() + mes.slice(1)
+}
+
 export default function PortalPage() {
   const [step, setStep] = useState<Step>("login")
 
@@ -299,7 +307,7 @@ export default function PortalPage() {
     .filter((p) => !p.pagado)
     .sort((a, b) => new Date(a.fecha_vencimiento).getTime() - new Date(b.fecha_vencimiento).getTime())[0]
 
-  const primerNombre = cliente?.nombre_completo?.split(" ")[0] || "Cliente"
+  const nombreCliente = cliente?.nombre_completo || "Cliente"
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex flex-col">
@@ -391,7 +399,7 @@ export default function PortalPage() {
         {step === "select-contract" && (
           <div className="max-w-md mx-auto">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-800">Hola, {primerNombre}</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Hola, {nombreCliente}</h1>
               <p className="text-sm text-gray-500 mt-2 text-pretty">
                 Tiene {contratos.length} contratos registrados. Seleccione el que desea gestionar.
               </p>
@@ -428,7 +436,7 @@ export default function PortalPage() {
           <div>
             <div className="mb-6">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800 text-balance">
-                Hola, {primerNombre}. Nos alegra atenderle.
+                Hola, {nombreCliente}. Es un placer atenderle.
               </h1>
               <p className="text-sm text-gray-500 mt-2 text-pretty">
                 Desde aquí puede reportar una falla en su servicio o revisar el estado de sus pagos.
@@ -526,7 +534,7 @@ export default function PortalPage() {
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">Recibimos su reporte</h2>
                   <p className="text-sm text-gray-500 mt-2 text-pretty">
-                    Gracias, {primerNombre}. Nuestro equipo revisará su falla y se pondrá en contacto con usted.
+                    Gracias, {nombreCliente}. Nuestro equipo revisará su falla y se pondrá en contacto con usted.
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
@@ -727,6 +735,7 @@ export default function PortalPage() {
                       <thead>
                         <tr className="bg-gray-50 text-gray-500 text-xs">
                           <th className="text-left font-medium px-4 py-2.5">Cuota</th>
+                          <th className="text-left font-medium px-4 py-2.5">Mes</th>
                           <th className="text-left font-medium px-4 py-2.5">Vencimiento</th>
                           <th className="text-right font-medium px-4 py-2.5">Monto</th>
                           <th className="text-left font-medium px-4 py-2.5">Estado</th>
@@ -737,6 +746,7 @@ export default function PortalPage() {
                         {pagos.map((p) => (
                           <tr key={p.id} className="hover:bg-gray-50/60">
                             <td className="px-4 py-2.5 font-medium text-gray-700">#{p.numero_cuota}</td>
+                            <td className="px-4 py-2.5 text-gray-600">{formatMes(p.fecha_vencimiento)}</td>
                             <td className="px-4 py-2.5 text-gray-600">{formatFecha(p.fecha_vencimiento)}</td>
                             <td className="px-4 py-2.5 text-right text-gray-700">
                               L{Number(p.monto_esperado || 0).toFixed(2)}
