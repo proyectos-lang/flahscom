@@ -72,20 +72,42 @@ export async function PATCH(request: NextRequest) {
     const supabase = await getSupabaseServerClient()
 
     if (tipo === "reconexion") {
+      // Read the current payment state to decide whether this cuota's payment is
+      // still pending confirmation (pagado = true, confirmado != "si"). If so,
+      // enabling the reconnection also auto-approves that payment in one step.
+      const { data: current, error: readError } = await supabase
+        .from("plan_pagos")
+        .select("pagado, confirmado")
+        .eq("id", id)
+        .single()
+
+      if (readError) {
+        console.error("[v0] Error reading plan_pagos:", readError)
+        return NextResponse.json({ error: readError.message }, { status: 500 })
+      }
+
+      const estabaPendiente = current?.pagado === true && current?.confirmado !== "si"
+
+      const updatePayload: Record<string, any> = { alerta_procesada: true }
+      if (estabaPendiente) {
+        updatePayload.confirmado = "si"
+        updatePayload.updated_at = new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from("plan_pagos")
-        .update({ alerta_procesada: true })
+        .update(updatePayload)
         .eq("id", id)
 
       if (error) {
         console.error("[v0] Error updating plan_pagos:", error)
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
+
+      return NextResponse.json({ success: true, pagoAprobado: estabaPendiente })
     } else {
       return NextResponse.json({ error: "Tipo de alerta invalido" }, { status: 400 })
     }
-
-    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("[v0] Error processing alert:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
