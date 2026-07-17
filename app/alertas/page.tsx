@@ -86,16 +86,12 @@ export default function CentroAlertasPage() {
 
       if (!res.ok) throw new Error("Error al procesar")
 
-      const data = await res.json().catch(() => ({}))
-
       // Remove from local state
       setReconexiones((prev) => prev.filter((a) => a.id !== id))
 
       toast({
         title: "Reconexion Procesada",
-        description: data.pagoAprobado
-          ? "El servicio fue marcado para reconexion y el pago se aprobo automaticamente."
-          : "El servicio ha sido marcado para reconexion",
+        description: "El servicio ha sido marcado para reconexion",
       })
     } catch (error) {
       console.error("Error:", error)
