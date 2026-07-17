@@ -5,17 +5,18 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const nombreSearch = searchParams.get("nombre")
+    const identidadSearch = searchParams.get("identidad")
     const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1"))
     const limit = 50
 
-    if (!nombreSearch || !nombreSearch.trim()) {
+    if ((!nombreSearch || !nombreSearch.trim()) && (!identidadSearch || !identidadSearch.trim())) {
       return NextResponse.json({ clientes: [], total: 0, page, limit, totalPages: 0 })
     }
 
     const offset = (page - 1) * limit
     const supabase = await getSupabaseServerClient()
 
-    const isNumericSearch = !isNaN(Number(nombreSearch)) && nombreSearch.trim() !== ""
+    const isNumericSearch = !isNaN(Number(nombreSearch)) && (nombreSearch || "").trim() !== ""
 
     let countQuery = supabase
       .from("clientes")
@@ -27,12 +28,15 @@ export async function GET(request: Request) {
       .order("nombre_completo", { ascending: true })
       .range(offset, offset + limit - 1)
 
-    if (isNumericSearch) {
+    if (identidadSearch && identidadSearch.trim()) {
+      countQuery = countQuery.ilike("numero_identidad", `%${identidadSearch.trim()}%`)
+      dataQuery = dataQuery.ilike("numero_identidad", `%${identidadSearch.trim()}%`)
+    } else if (isNumericSearch) {
       countQuery = countQuery.eq("id", Number(nombreSearch))
       dataQuery = dataQuery.eq("id", Number(nombreSearch))
     } else {
-      countQuery = countQuery.ilike("nombre_completo", `%${nombreSearch.trim()}%`)
-      dataQuery = dataQuery.ilike("nombre_completo", `%${nombreSearch.trim()}%`)
+      countQuery = countQuery.ilike("nombre_completo", `%${(nombreSearch || "").trim()}%`)
+      dataQuery = dataQuery.ilike("nombre_completo", `%${(nombreSearch || "").trim()}%`)
     }
 
     const [{ count }, { data, error }] = await Promise.all([countQuery, dataQuery])

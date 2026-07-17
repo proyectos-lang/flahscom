@@ -33,6 +33,7 @@ const TIPOS_FALLA = ["FO", "TV ADICIONAL", "EQUIPO DAÑADO", "REPARA FO", "REVIS
 export default function CallCenterPage() {
   const [searchById, setSearchById] = useState("")
   const [searchByName, setSearchByName] = useState("")
+  const [searchByCedula, setSearchByCedula] = useState("")
   const [searching, setSearching] = useState(false)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null)
@@ -95,11 +96,27 @@ export default function CallCenterPage() {
     }
   }
 
+  const handleSearchByCedula = async () => {
+    if (!searchByCedula.trim()) return
+
+    setSearching(true)
+    try {
+      const response = await fetch(`/api/clientes/search?identidad=${encodeURIComponent(searchByCedula.trim())}`)
+      const data = await response.json()
+      setClientes(data.clientes || [])
+    } catch (error) {
+      console.error("Error buscando por cédula:", error)
+    } finally {
+      setSearching(false)
+    }
+  }
+
   const handleSelectCliente = async (cliente: Cliente) => {
     setSelectedCliente(cliente)
     setClientes([])
     setSearchById("")
     setSearchByName("")
+    setSearchByCedula("")
     setEstadoCartera(null)
     setFallaPendiente(null)
 
@@ -239,7 +256,7 @@ export default function CallCenterPage() {
           </div>
 
           {/* Search by Name */}
-          <div>
+          <div className="mb-4">
             <label className="text-sm font-medium text-gray-700 mb-2 block">Buscar por Nombre</label>
             <div className="flex gap-2">
               <Input
@@ -249,8 +266,29 @@ export default function CallCenterPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleSearchByName()}
                 className="flex-1"
               />
-              <Button 
-                onClick={handleSearchByName} 
+              <Button
+                onClick={handleSearchByName}
+                disabled={searching}
+              >
+                {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Search by Cédula */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Buscar por Cédula</label>
+            <div className="flex gap-2">
+              <Input
+                inputMode="numeric"
+                placeholder="Ej: 0801199012345"
+                value={searchByCedula}
+                onChange={(e) => setSearchByCedula(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchByCedula()}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSearchByCedula}
                 disabled={searching}
               >
                 {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
