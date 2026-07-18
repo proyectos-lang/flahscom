@@ -164,12 +164,23 @@ export default function VacacionesPage() {
     loadData()
   }, [loadData])
 
+  // Counts the vacation days between the two dates (inclusive), EXCLUDING
+  // Sundays, which are the only non-working (rest) day. Dates are parsed as
+  // local calendar dates so the weekday is not shifted by the UTC offset.
   const calcularDias = (inicio: string, fin: string) => {
     if (!inicio || !fin) return 0
-    const start = new Date(inicio)
-    const end = new Date(fin)
-    const diff = end.getTime() - start.getTime()
-    return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1
+    const [ys, ms, ds] = inicio.split("T")[0].split("-").map(Number)
+    const [ye, me, de] = fin.split("T")[0].split("-").map(Number)
+    const start = new Date(ys, ms - 1, ds)
+    const end = new Date(ye, me - 1, de)
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0
+    let count = 0
+    const cur = new Date(start)
+    while (cur <= end) {
+      if (cur.getDay() !== 0) count++ // 0 = domingo (día no hábil, excluido)
+      cur.setDate(cur.getDate() + 1)
+    }
+    return count
   }
 
   // Pre-compute balances for each employee. Balances now come from the
@@ -1170,7 +1181,7 @@ export default function VacacionesPage() {
                     El empleado no cuenta con suficientes días acumulados
                   </span>
                 ) : (
-                  <>Total: {diasForm} dias</>
+                  <>Total: {diasForm} dias (no incluye domingos)</>
                 )}
               </div>
             )}
