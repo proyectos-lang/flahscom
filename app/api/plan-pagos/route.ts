@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     const fechaPagoDesde = searchParams.get("fechaPagoDesde") // payment date range start (YYYY-MM-DD)
     const fechaPagoHasta = searchParams.get("fechaPagoHasta") // payment date range end (YYYY-MM-DD)
     const registradoPorFilter = searchParams.get("registradoPor") // user who registered the payment
+    const aprobadoPorFilter = searchParams.get("aprobadoPor") // user who approved (confirmed) the payment
 
     console.log("[v0] Filtering payments for month:", month, "page:", page, "exportAll:", exportAll)
 
@@ -75,6 +76,10 @@ export async function GET(request: Request) {
       query = query.ilike("usuariopago", `%${registradoPorFilter}%`)
     }
 
+    if (aprobadoPorFilter) {
+      query = query.ilike("usuarioconfirma", `%${aprobadoPorFilter}%`)
+    }
+
     let countQuery = supabase
       .from("plan_pagos")
       .select("*", { count: "exact", head: true })
@@ -114,6 +119,10 @@ export async function GET(request: Request) {
 
     if (registradoPorFilter) {
       countQuery = countQuery.ilike("usuariopago", `%${registradoPorFilter}%`)
+    }
+
+    if (aprobadoPorFilter) {
+      countQuery = countQuery.ilike("usuarioconfirma", `%${aprobadoPorFilter}%`)
     }
 
     const { count: totalCount } = await countQuery

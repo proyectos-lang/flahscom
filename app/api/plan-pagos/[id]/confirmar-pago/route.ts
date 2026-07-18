@@ -30,7 +30,7 @@ export async function POST(
     console.log("[v0] Starting payment confirmation for id:", id)
     
     const body = await request.json()
-    const { password } = body
+    const { password, usuarioConfirma } = body
 
     // Verify password
     if (password !== process.env.PLAN_PAGOS_ADMIN_PASSWORD) {
@@ -39,11 +39,13 @@ export async function POST(
 
     console.log("[v0] Password verified, updating payment confirmation")
 
-    // Update plan_pagos record
+    // Update plan_pagos record. usuarioconfirma records WHO approved the payment
+    // (mirrors usuariopago, which records who registered it).
     const { data, error } = await supabase
       .from("plan_pagos")
       .update({
         confirmado: "si",
+        usuarioconfirma: usuarioConfirma || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)

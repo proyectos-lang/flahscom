@@ -9,7 +9,7 @@ const supabase = createClient(
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { ids, password } = body
+    const { ids, password, usuarioConfirma } = body
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json({ error: "No se proporcionaron IDs de pagos" }, { status: 400 })
@@ -20,11 +20,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Contrasena incorrecta" }, { status: 401 })
     }
 
-    // Update all selected payments
+    // Update all selected payments. usuarioconfirma records WHO approved them.
     const { data, error } = await supabase
       .from("plan_pagos")
       .update({
         confirmado: "si",
+        usuarioconfirma: usuarioConfirma || null,
         updated_at: new Date().toISOString(),
       })
       .in("id", ids)

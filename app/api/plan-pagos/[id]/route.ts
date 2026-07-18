@@ -32,6 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.fecha_pago !== undefined) updateData.fecha_pago = body.fecha_pago
     if (body.referencia !== undefined) updateData.referencia = body.referencia
     if (body.usuariopago !== undefined) updateData.usuariopago = body.usuariopago
+    if (body.usuarioconfirma !== undefined) updateData.usuarioconfirma = body.usuarioconfirma
     if (body.monto_esperado !== undefined) updateData.monto_esperado = body.monto_esperado
     // Allow free-text annotation per cuota (used by the payment-history UI).
     if (body.comentario !== undefined) updateData.comentario = body.comentario

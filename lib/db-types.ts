@@ -146,6 +146,10 @@ export interface PlanPagos {
   referencia: string | null
   // Voucher/receipt date entered by the user (separate from fecha_pago).
   pagoreferencia: string | null
+  // Name of the user who registered the payment.
+  usuariopago: string | null
+  // Name of the user who approved (confirmed) the payment.
+  usuarioconfirma: string | null
   created_at: string
   updated_at: string
 }

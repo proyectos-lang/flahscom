@@ -58,6 +58,7 @@ export default function PaymentsPage() {
   const [fechaPagoDesde, setFechaPagoDesde] = useState<string>("")
   const [fechaPagoHasta, setFechaPagoHasta] = useState<string>("")
   const [registradoPorFilter, setRegistradoPorFilter] = useState<string>("")
+  const [aprobadoPorFilter, setAprobadoPorFilter] = useState<string>("")
 
   // Bulk selection state
   const [selectedPagos, setSelectedPagos] = useState<Set<number>>(new Set())
@@ -114,11 +115,11 @@ export default function PaymentsPage() {
   useEffect(() => {
     setCurrentPage(1)
     setSelectedPagos(new Set()) // Clear selection on filter change
-  }, [estadoFilter, confirmadoFilter, moraFilter, contratoFilter, clienteFilter, fechaPagoDesde, fechaPagoHasta, registradoPorFilter])
+  }, [estadoFilter, confirmadoFilter, moraFilter, contratoFilter, clienteFilter, fechaPagoDesde, fechaPagoHasta, registradoPorFilter, aprobadoPorFilter])
 
   useEffect(() => {
     loadPagos()
-  }, [selectedMonth, currentPage, estadoFilter, confirmadoFilter, moraFilter, contratoFilter, clienteFilter, fechaPagoDesde, fechaPagoHasta, registradoPorFilter])
+  }, [selectedMonth, currentPage, estadoFilter, confirmadoFilter, moraFilter, contratoFilter, clienteFilter, fechaPagoDesde, fechaPagoHasta, registradoPorFilter, aprobadoPorFilter])
 
   const loadPagos = async () => {
     setLoading(true)
@@ -142,6 +143,7 @@ export default function PaymentsPage() {
       if (fechaPagoDesde && fechaPagoDesde.trim()) params.append("fechaPagoDesde", fechaPagoDesde.trim())
       if (fechaPagoHasta && fechaPagoHasta.trim()) params.append("fechaPagoHasta", fechaPagoHasta.trim())
       if (registradoPorFilter && registradoPorFilter.trim()) params.append("registradoPor", registradoPorFilter.trim())
+      if (aprobadoPorFilter && aprobadoPorFilter.trim()) params.append("aprobadoPor", aprobadoPorFilter.trim())
 
       console.log("[v0] API URL:", `/api/plan-pagos?${params.toString()}`)
 
@@ -177,7 +179,7 @@ export default function PaymentsPage() {
       const response = await fetch(`/api/plan-pagos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagado: !currentValue, confirmado: false, comprobante: null }),
+        body: JSON.stringify({ pagado: !currentValue, confirmado: false, comprobante: null, usuarioconfirma: null }),
       })
 
       if (!response.ok) throw new Error("Error al actualizar pago")
@@ -354,7 +356,7 @@ export default function PaymentsPage() {
       const response = await fetch(`/api/plan-pagos/${confirmarPagoDialog.pago.id}/confirmar-pago`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, usuarioConfirma: user?.full_name || "" }),
       })
 
       if (!response.ok) {
@@ -391,9 +393,10 @@ export default function PaymentsPage() {
       const response = await fetch("/api/plan-pagos/confirmar-masivo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           ids: Array.from(selectedPagos),
-          password: passwordMasivo 
+          password: passwordMasivo,
+          usuarioConfirma: user?.full_name || "",
         }),
       })
 
@@ -527,6 +530,7 @@ export default function PaymentsPage() {
           fecha_pago: null,
           referencia: null,
           usuariopago: null,
+          usuarioconfirma: null,
           password: passwordEliminar,
         }),
       })
@@ -632,7 +636,9 @@ export default function PaymentsPage() {
         if (clienteFilter && clienteFilter.trim()) params.append("cliente", clienteFilter.trim())
         if (fechaPagoDesde && fechaPagoDesde.trim()) params.append("fechaPagoDesde", fechaPagoDesde.trim())
         if (fechaPagoHasta && fechaPagoHasta.trim()) params.append("fechaPagoHasta", fechaPagoHasta.trim())
-        
+        if (registradoPorFilter && registradoPorFilter.trim()) params.append("registradoPor", registradoPorFilter.trim())
+        if (aprobadoPorFilter && aprobadoPorFilter.trim()) params.append("aprobadoPor", aprobadoPorFilter.trim())
+
         return params
       }
 
@@ -694,6 +700,8 @@ export default function PaymentsPage() {
         "Fecha Pago",
         "Referencia",
         "Fecha Referencia",
+        "Registrado Por",
+        "Aprobado Por",
         "Monto (L)",
         "Pagado",
         "Confirmado",
@@ -707,6 +715,8 @@ export default function PaymentsPage() {
         pago.fecha_pago || "-",
         pago.referencia || "-",
         formatPagoReferencia(pago.pagoreferencia),
+        pago.usuariopago || "-",
+        pago.usuarioconfirma || "-",
         Number(pago.monto_esperado),
         pago.pagado ? "Sí" : "No",
         pago.confirmado === "si" ? "Sí" : "No",
@@ -932,6 +942,17 @@ export default function PaymentsPage() {
                 className="h-9"
               />
             </div>
+
+            <div>
+              <Label className="text-xs">Aprobado Por</Label>
+              <Input
+                type="text"
+                placeholder="Nombre usuario..."
+                value={aprobadoPorFilter}
+                onChange={(e) => setAprobadoPorFilter(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1028,6 +1049,7 @@ export default function PaymentsPage() {
                   <th className="px-2 py-1.5 text-left font-medium text-gray-600">Referencia</th>
                   <th className="px-2 py-1.5 text-left font-medium text-gray-600">Fecha Referencia</th>
                   <th className="px-2 py-1.5 text-left font-medium text-gray-600">Registrado Por</th>
+                  <th className="px-2 py-1.5 text-left font-medium text-gray-600">Aprobado Por</th>
                   <th className="px-2 py-1.5 text-right font-medium text-gray-600">Monto</th>
                   <th className="px-2 py-1.5 text-center font-medium text-gray-600">Estado</th>
                   <th className="px-2 py-1.5 text-center font-medium text-gray-600">Alerta Mora</th>
@@ -1073,6 +1095,9 @@ export default function PaymentsPage() {
                         </td>
                         <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-600">
                           {pago.usuariopago || "-"}
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap text-sm text-gray-600">
+                          {pago.usuarioconfirma || "-"}
                         </td>
                         <td className="px-2 py-2 text-right font-medium whitespace-nowrap">
                           L {Number(pago.monto_esperado).toFixed(2)}
@@ -1176,7 +1201,7 @@ export default function PaymentsPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={14} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={15} className="px-4 py-8 text-center text-gray-500">
                       No hay pagos para los filtros seleccionados
                     </td>
                   </tr>
