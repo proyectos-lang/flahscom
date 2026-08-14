@@ -35,13 +35,14 @@ export async function GET() {
       console.error("[v0] Error fetching pagos alerts:", pagosError)
     }
 
-    // A reconnection candidate is a payment made AFTER the grace period. The
-    // cuota is due on the 15th and the customer has until the 15th of the
-    // FOLLOWING month (a full calendar month) to pay; only a payment made
-    // strictly after that date means they were actually cut and now need
-    // reconnection. A fixed "30 days" was wrong because months vary in length
-    // (e.g. due 15-jul + 30 days = 14-ago, a day short of the real 15-ago
-    // deadline, so someone paying on the 14th was wrongly flagged).
+    // A reconnection candidate is a payment made once the customer had already
+    // reached "Cortar" status. This MUST match exactly the Cortar rule of the
+    // Cartera view v_cuota_vigente_detallada, which cuts when
+    //   CURRENT_DATE >= fecha_vencimiento + interval '1 month'
+    // (i.e. the 15th of the FOLLOWING month, inclusive). So a payment counts as
+    // a reconnection when fecha_pago >= fecha_vencimiento + 1 calendar month.
+    // A fixed "30 days" was wrong because months vary in length (due 15-jul + 30
+    // days = 14-ago, a day short of the real 15-ago cut date).
     //
     // Dates are parsed as LOCAL calendar dates (not UTC) so the day is not
     // shifted by the Honduras UTC-6 offset.
@@ -54,8 +55,8 @@ export async function GET() {
       const fechaVencimiento = parseLocal(pago.fecha_vencimiento)
       const fechaPago = parseLocal(pago.fecha_pago)
       const fechaCorte = new Date(fechaVencimiento)
-      fechaCorte.setMonth(fechaCorte.getMonth() + 1) // el 15 del mes siguiente
-      return fechaPago > fechaCorte
+      fechaCorte.setMonth(fechaCorte.getMonth() + 1) // el 15 del mes siguiente (día de corte)
+      return fechaPago >= fechaCorte
     }).map((pago: any) => {
       const fechaVencimiento = parseLocal(pago.fecha_vencimiento)
       const fechaPago = parseLocal(pago.fecha_pago)
