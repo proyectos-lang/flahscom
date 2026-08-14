@@ -35,17 +35,30 @@ export async function GET() {
       console.error("[v0] Error fetching pagos alerts:", pagosError)
     }
 
-    // Filter pagos where fecha_pago - fecha_vencimiento >= 30 days
-    // (30 days exactly is included as a reconnection candidate).
+    // A reconnection candidate is a payment made AFTER the grace period. The
+    // cuota is due on the 15th and the customer has until the 15th of the
+    // FOLLOWING month (a full calendar month) to pay; only a payment made
+    // strictly after that date means they were actually cut and now need
+    // reconnection. A fixed "30 days" was wrong because months vary in length
+    // (e.g. due 15-jul + 30 days = 14-ago, a day short of the real 15-ago
+    // deadline, so someone paying on the 14th was wrongly flagged).
+    //
+    // Dates are parsed as LOCAL calendar dates (not UTC) so the day is not
+    // shifted by the Honduras UTC-6 offset.
+    const parseLocal = (s: string) => {
+      const [y, m, d] = s.split("T")[0].split("-").map(Number)
+      return new Date(y, m - 1, d)
+    }
     const reconexiones = (pagos || []).filter((pago: any) => {
       if (!pago.fecha_pago || !pago.fecha_vencimiento) return false
-      const fechaPago = new Date(pago.fecha_pago)
-      const fechaVencimiento = new Date(pago.fecha_vencimiento)
-      const diffDays = Math.floor((fechaPago.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24))
-      return diffDays >= 30
+      const fechaVencimiento = parseLocal(pago.fecha_vencimiento)
+      const fechaPago = parseLocal(pago.fecha_pago)
+      const fechaCorte = new Date(fechaVencimiento)
+      fechaCorte.setMonth(fechaCorte.getMonth() + 1) // el 15 del mes siguiente
+      return fechaPago > fechaCorte
     }).map((pago: any) => {
-      const fechaPago = new Date(pago.fecha_pago)
-      const fechaVencimiento = new Date(pago.fecha_vencimiento)
+      const fechaVencimiento = parseLocal(pago.fecha_vencimiento)
+      const fechaPago = parseLocal(pago.fecha_pago)
       const diasRetraso = Math.floor((fechaPago.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24))
       const clienteData = pago.contratos?.clientes
       const colonia = clienteData?.colonia || clienteData?.direccion || null

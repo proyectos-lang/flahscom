@@ -43,6 +43,17 @@ function formatHora(hora: string | null): string | null {
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`
 }
 
+// Format a DATE column value ("YYYY-MM-DD") as "dd mmm" WITHOUT a timezone
+// shift. new Date("2026-07-15") parses as UTC midnight and renders one day
+// earlier in Honduras (UTC-6, e.g. "14 jul"); parsing the parts as a local
+// date shows the real stored day.
+function formatFechaCorta(value: string | null): string {
+  if (!value) return "-"
+  const [y, m, d] = value.split("T")[0].split("-").map(Number)
+  if (!y || !m || !d) return "-"
+  return new Date(y, m - 1, d).toLocaleDateString("es-HN", { day: "2-digit", month: "short" })
+}
+
 export default function CentroAlertasPage() {
   const [reconexiones, setReconexiones] = useState<AlertaReconexion[]>([])
   const [loading, setLoading] = useState(true)
@@ -203,19 +214,13 @@ export default function CentroAlertasPage() {
                         <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-sm">
                           <Calendar className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
                           <span className="text-gray-600">
-                            Vencio: {new Date(alerta.fecha_vencimiento).toLocaleDateString("es-HN", {
-                              day: "2-digit",
-                              month: "short",
-                            })}
+                            Vencio: {formatFechaCorta(alerta.fecha_vencimiento)}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-sm">
                           <CheckCircle className="w-3 h-3 md:w-4 md:h-4 text-green-500" />
                           <span className="text-gray-600">
-                            Pago: {new Date(alerta.fecha_pago).toLocaleDateString("es-HN", {
-                              day: "2-digit",
-                              month: "short",
-                            })}
+                            Pago: {formatFechaCorta(alerta.fecha_pago)}
                             {formatHora(alerta.horapago) && (
                               <span className="text-gray-500">
                                 {" "}
